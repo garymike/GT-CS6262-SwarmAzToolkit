@@ -81,17 +81,15 @@ under the billing-account scope.) Alerts fire only once a threshold is crossed; 
 - `modules/openai.bicep` — Azure OpenAI account + grading/dev deployments (each toggleable, own SKU)
 - `main.json` — compiled ARM template (for anyone without Bicep)
 
-## Roadmap
-- [x] MVP: deploy + `.env`
-- [x] Tooling detection + auto-install (az, bicep) with in-process PATH refresh
-- [x] Guided `bootstrap.ps1` (login, subscription picker, role check)
-- [x] Region scan + **interactive model picker** (quota-aware, deprecation-aware)
-- [x] **Quota + deprecation preflight** (skips undeployable models, picks a SKU with quota)
-- [x] Cost guardrail: opt-in monthly budget + email alerts
-- [x] Month-to-date spend report (`status.ps1`)
-- [x] `teardown.ps1` (delete RG + budget)
-- [x] Compiled ARM JSON for students without Bicep
-- [ ] Idempotent re-runs (detect existing account/deployments)
+## Features
+- Tooling detection + optional auto-install of `az`/`bicep`, with in-process PATH refresh (no shell restart needed)
+- Guided login, subscription picker, and role check
+- Region scan + interactive, quota- and deprecation-aware model picker
+- Quota + deprecation preflight: skips models you can't deploy and picks a SKU that has quota
+- Opt-in monthly cost budget with email alerts (50/80/100% actual + 100% forecast)
+- Month-to-date spend report (`status.ps1`) and one-command teardown (`teardown.ps1`)
+- Compiled ARM template (`main.json`) for use without Bicep
+- Idempotent: re-running applies the same declarative template (safe to run repeatedly; e.g. after a quota grant)
 
 ## Cost
 Per-token billing, no idle cost. Target **$10–20 total** for the whole project; run `teardown.ps1`
