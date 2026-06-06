@@ -94,3 +94,7 @@ under the billing-account scope.) Alerts fire only once a threshold is crossed; 
 ## Cost
 Per-token billing, no idle cost. Target **$10–20 total** for the whole project; run `teardown.ps1`
 when done. You are responsible for spend beyond free credits.
+
+## License
+MIT — see [LICENSE](LICENSE). Provided as-is to help fellow students with environment setup; it is
+not a graded artifact and contains no assignment solutions.
