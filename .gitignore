@@ -1,0 +1,13 @@
+# Secrets — NEVER commit
+.env
+*.env
+!.env.example
+*.key
+
+# Bicep build output
+*.json.tmp
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/

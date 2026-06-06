@@ -1,0 +1,440 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "6642287541976099125"
+    }
+  },
+  "parameters": {
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "rg-swarm-openai",
+      "metadata": {
+        "description": "Resource group to create/use."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus2",
+      "metadata": {
+        "description": "Azure region. Default eastus2."
+      }
+    },
+    "accountName": {
+      "type": "string",
+      "defaultValue": "[format('swarm-openai-{0}', uniqueString(subscription().id, parameters('resourceGroupName')))]",
+      "metadata": {
+        "description": "Azure OpenAI account name (also the custom subdomain). Globally unique-ish."
+      }
+    },
+    "deployGrading": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy the grading model. deploy.ps1 sets this from a quota preflight (often false on student subs)."
+      }
+    },
+    "gradingDeploymentName": {
+      "type": "string",
+      "defaultValue": "gpt-5-nano",
+      "metadata": {
+        "description": "Grading deployment name (keep matching the project .env / grader)."
+      }
+    },
+    "gradingModelName": {
+      "type": "string",
+      "defaultValue": "gpt-5-nano",
+      "metadata": {
+        "description": "Grading Azure model name."
+      }
+    },
+    "gradingModelVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Grading model version. Resolved by deploy.ps1."
+      }
+    },
+    "gradingSku": {
+      "type": "string",
+      "defaultValue": "GlobalStandard",
+      "allowedValues": [
+        "GlobalStandard",
+        "Standard",
+        "DataZoneStandard"
+      ]
+    },
+    "deployDev": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the dev/iteration model."
+      }
+    },
+    "devDeploymentName": {
+      "type": "string",
+      "defaultValue": "gpt-5-mini",
+      "metadata": {
+        "description": "Dev deployment name."
+      }
+    },
+    "devModelName": {
+      "type": "string",
+      "defaultValue": "gpt-5-mini",
+      "metadata": {
+        "description": "Dev Azure model name (default gpt-5-mini — gpt-5 family, parity with grader)."
+      }
+    },
+    "devModelVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Dev model version. Resolved by deploy.ps1."
+      }
+    },
+    "devSku": {
+      "type": "string",
+      "defaultValue": "GlobalStandard",
+      "allowedValues": [
+        "GlobalStandard",
+        "Standard",
+        "DataZoneStandard"
+      ]
+    },
+    "capacity": {
+      "type": "int",
+      "defaultValue": 10,
+      "metadata": {
+        "description": "Tokens-per-minute capacity (x1000) for each deployment."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "project": "cs6262-swarm",
+        "purpose": "student-llm-iteration"
+      },
+      "metadata": {
+        "description": "Tags applied to all resources."
+      }
+    },
+    "enableBudget": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Create a monthly Cost Management budget with alert thresholds."
+      }
+    },
+    "budgetAmount": {
+      "type": "int",
+      "defaultValue": 20,
+      "metadata": {
+        "description": "Monthly budget amount in subscription currency (USD). Project target is $10-20."
+      }
+    },
+    "budgetContactEmails": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Emails to alert. deploy.ps1 fills this from your signed-in account."
+      }
+    },
+    "budgetStartDate": {
+      "type": "string",
+      "defaultValue": "[utcNow('yyyy-MM-01')]",
+      "metadata": {
+        "description": "Budget start — must be the first of a month. Defaults to the current month."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "condition": "[and(parameters('enableBudget'), not(empty(parameters('budgetContactEmails'))))]",
+      "type": "Microsoft.Consumption/budgets",
+      "apiVersion": "2023-11-01",
+      "name": "swarm-monthly-budget",
+      "properties": {
+        "category": "Cost",
+        "amount": "[parameters('budgetAmount')]",
+        "timeGrain": "Monthly",
+        "timePeriod": {
+          "startDate": "[parameters('budgetStartDate')]"
+        },
+        "notifications": {
+          "actual_50": {
+            "enabled": true,
+            "operator": "GreaterThanOrEqualTo",
+            "threshold": 50,
+            "thresholdType": "Actual",
+            "contactEmails": "[parameters('budgetContactEmails')]"
+          },
+          "actual_80": {
+            "enabled": true,
+            "operator": "GreaterThanOrEqualTo",
+            "threshold": 80,
+            "thresholdType": "Actual",
+            "contactEmails": "[parameters('budgetContactEmails')]"
+          },
+          "actual_100": {
+            "enabled": true,
+            "operator": "GreaterThanOrEqualTo",
+            "threshold": 100,
+            "thresholdType": "Actual",
+            "contactEmails": "[parameters('budgetContactEmails')]"
+          },
+          "forecast_100": {
+            "enabled": true,
+            "operator": "GreaterThanOrEqualTo",
+            "threshold": 100,
+            "thresholdType": "Forecasted",
+            "contactEmails": "[parameters('budgetContactEmails')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "swarm-openai-deploy",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "accountName": {
+            "value": "[parameters('accountName')]"
+          },
+          "deployGrading": {
+            "value": "[parameters('deployGrading')]"
+          },
+          "gradingDeploymentName": {
+            "value": "[parameters('gradingDeploymentName')]"
+          },
+          "gradingModelName": {
+            "value": "[parameters('gradingModelName')]"
+          },
+          "gradingModelVersion": {
+            "value": "[parameters('gradingModelVersion')]"
+          },
+          "gradingSku": {
+            "value": "[parameters('gradingSku')]"
+          },
+          "deployDev": {
+            "value": "[parameters('deployDev')]"
+          },
+          "devDeploymentName": {
+            "value": "[parameters('devDeploymentName')]"
+          },
+          "devModelName": {
+            "value": "[parameters('devModelName')]"
+          },
+          "devModelVersion": {
+            "value": "[parameters('devModelVersion')]"
+          },
+          "devSku": {
+            "value": "[parameters('devSku')]"
+          },
+          "capacity": {
+            "value": "[parameters('capacity')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "15332059656215356204"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "accountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure OpenAI account name (also custom subdomain)."
+              }
+            },
+            "deployGrading": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Deploy the grading-parity model (needs quota; commonly 0 on student subs)."
+              }
+            },
+            "gradingDeploymentName": {
+              "type": "string"
+            },
+            "gradingModelName": {
+              "type": "string"
+            },
+            "gradingModelVersion": {
+              "type": "string"
+            },
+            "gradingSku": {
+              "type": "string",
+              "defaultValue": "GlobalStandard",
+              "allowedValues": [
+                "GlobalStandard",
+                "Standard",
+                "DataZoneStandard"
+              ]
+            },
+            "deployDev": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Deploy the dev/iteration model."
+              }
+            },
+            "devDeploymentName": {
+              "type": "string"
+            },
+            "devModelName": {
+              "type": "string"
+            },
+            "devModelVersion": {
+              "type": "string"
+            },
+            "devSku": {
+              "type": "string",
+              "defaultValue": "GlobalStandard",
+              "allowedValues": [
+                "GlobalStandard",
+                "Standard",
+                "DataZoneStandard"
+              ]
+            },
+            "capacity": {
+              "type": "int"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2024-10-01",
+              "name": "[parameters('accountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "OpenAI",
+              "sku": {
+                "name": "S0"
+              },
+              "properties": {
+                "customSubDomainName": "[parameters('accountName')]",
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "condition": "[parameters('deployGrading')]",
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('gradingDeploymentName'))]",
+              "sku": {
+                "name": "[parameters('gradingSku')]",
+                "capacity": "[parameters('capacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('gradingModelName')]",
+                  "version": "[parameters('gradingModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('deployDev')]",
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('devDeploymentName'))]",
+              "sku": {
+                "name": "[parameters('devSku')]",
+                "capacity": "[parameters('capacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('devModelName')]",
+                  "version": "[parameters('devModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('accountName'), parameters('gradingDeploymentName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "accountName": {
+              "type": "string",
+              "value": "[parameters('accountName')]"
+            },
+            "endpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01').endpoint]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "accountName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'swarm-openai-deploy'), '2025-04-01').outputs.accountName.value]"
+    },
+    "endpoint": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'swarm-openai-deploy'), '2025-04-01').outputs.endpoint.value]"
+    },
+    "budgetCreated": {
+      "type": "bool",
+      "value": "[and(parameters('enableBudget'), not(empty(parameters('budgetContactEmails'))))]"
+    },
+    "gradingDeployment": {
+      "type": "string",
+      "value": "[if(parameters('deployGrading'), parameters('gradingDeploymentName'), '')]"
+    },
+    "devDeployment": {
+      "type": "string",
+      "value": "[if(parameters('deployDev'), parameters('devDeploymentName'), '')]"
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[parameters('resourceGroupName')]"
+    }
+  }
+}
