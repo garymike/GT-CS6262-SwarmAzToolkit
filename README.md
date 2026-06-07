@@ -1,111 +1,94 @@
 # swarm-azure-toolkit
 
-One-command Azure OpenAI provisioning for the **CS 6262 SWARM** project. Deploys an Azure OpenAI
-account with three model slots — a **grading** model (`gpt-5-nano`, parity with the staff autograder),
-a **dev** model (`gpt-5-mini`, cheap local iteration in the same gpt-5 family), and an **embedding**
-model (`text-embedding-3-small`, for the RAG) — runs a **quota + deprecation preflight**, skips
-anything it can't deploy, creates a **cost budget with alerts**, and writes a ready `.env`.
-Student-agnostic: nothing is hard-coded to one subscription/tenant.
+Scripts to set up an Azure OpenAI environment for the CS 6262 SWARM project. One command creates a
+resource group, an Azure OpenAI account, the model deployments your subscription has quota for, and
+a monthly cost budget, then writes a `.env`.
 
-> **Heads-up (June 2026): the course staff now recommend OpenAI, not Azure.** Microsoft's quota
-> policy change means `gpt-5-nano` (and `ada-002`) quota requests are commonly **denied** on
-> Azure-for-Students subs — especially if the account is tied to a **GaTech email/tenant**. This
-> toolkit is for those who still want the Azure path: it auto-deploys the models that *do* have
-> quota (e.g. `gpt-5-mini` + `text-embedding-3-small`) and skips the rest. For the simplest route,
-> use OpenAI direct (`gpt-5-nano` + `text-embedding-ada-002`, ~$5).
+As of June 2026 the course staff recommend OpenAI over Azure. Microsoft changed their quota policy,
+so `gpt-5-nano` and `ada-002` quota requests are often denied on Azure for Students accounts,
+especially ones created with a GaTech email (that puts the account in the GaTech tenant, whose policy
+blocks the request). This toolkit covers the Azure path: it deploys whatever models you do have quota
+for (for example `gpt-5-mini` and `text-embedding-3-small`) and skips the rest. If you want the
+simpler route, use OpenAI directly with `gpt-5-nano` and `text-embedding-ada-002` for about $5.
 
-> Shareable with classmates — the project doc explicitly permits helping with technical setup, and
-> infra tooling is not a graded artifact. **Do not** put your `agents.yaml`/knowledge/training here.
+This is setup tooling only. There is no `agents.yaml`, knowledge base, or training data here, so it
+contains no graded work. Keep your own out of this repo.
 
 ## Prerequisites
-- Azure CLI + Bicep: `winget install Microsoft.AzureCLI` then `az bicep install` (bootstrap can do this)
-- An Azure subscription (Azure for Students gives ~$100 free credit). You need **Owner/Contributor on the subscription** — not tenant ownership.
-- PowerShell 7+
+- Azure CLI and Bicep (`winget install Microsoft.AzureCLI`, then `az bicep install`). `bootstrap.ps1` can install these for you.
+- An Azure subscription with Owner or Contributor access. Tenant ownership is not required. Azure for Students includes about $100 in credit.
+- PowerShell 7 or later.
 
 ## Usage
 
-### Guided (recommended) — `bootstrap.ps1`
-Interactive end-to-end setup; safe to re-run, nothing created until the WhatIf gate:
+`bootstrap.ps1` is the guided path. It is safe to re-run and creates nothing until you confirm at the preview step.
 ```powershell
 ./bootstrap.ps1
 ```
-Steps: detect `az`+`bicep` (offer install; refresh PATH in-process so a just-installed CLI is found
-without a shell restart) → `az login` (links to Azure for Students if you have none) → pick
-subscription → **check your role** → pick region + **choose which models to deploy** (lists only
-chat models that have quota and aren't deprecated) → opt-in **budget** → no-cost `-WhatIf` → deploy.
+It checks for `az` and `bicep`, runs `az login`, lets you pick a subscription and region, lists the
+chat and embedding models that have quota, lets you set a budget, shows a no-cost preview, and deploys.
 
-### Direct — `deploy.ps1`
+`deploy.ps1` is the scriptable path.
 ```powershell
-./deploy.ps1 -WhatIf                          # validate + preview, no changes
-./deploy.ps1 -Location eastus2                # deploy (gpt-5-mini dev by default; .env beside the script)
-./deploy.ps1 -EnvOut .\.env                   # or point -EnvOut anywhere (e.g. your VM-share path)
-./deploy.ps1 -DevModel gpt-4.1-mini           # choose a different dev model
-./deploy.ps1 -NoBudget                        # skip the budget
+./deploy.ps1 -WhatIf                 # preview only, no changes
+./deploy.ps1 -Location eastus2       # deploy; writes .env next to the script
+./deploy.ps1 -EnvOut .\.env          # write .env somewhere else
+./deploy.ps1 -DevModel gpt-4.1-mini  # use a different dev model
+./deploy.ps1 -NoBudget               # do not create a budget
 ```
-Auto-locates `az`, registers `Microsoft.CognitiveServices`, runs a **quota + deprecation preflight**
-(picks a SKU with available quota, skips any model with none), deploys, retrieves the key, writes `.env`.
+It finds `az`, registers the Cognitive Services provider, checks model availability and quota,
+deploys the models it can, retrieves the key, and writes the `.env`.
 
-### Other scripts
-- `status.ps1` — month-to-date spend + budget burn (via Cost Management REST; no extra extension).
-- `teardown.ps1` — delete the resource group (and budget) when the project is done.
+`status.ps1` reports month-to-date spend and budget usage. `teardown.ps1` deletes the resource group
+and budget when you are done.
 
-## Models, quota & SKUs (important)
-- **Student subs usually have 0 quota for `gpt-5-nano`** — the toolkit detects this and **skips** it.
-  That's fine: the **autograder uses the staff's Azure gpt-5-nano**, so your own is parity-only.
-- **`gpt-4o-mini` is deprecated for new Azure deployments** (since 2026-03-31). The default dev model
-  is therefore **`gpt-5-mini`** (gpt-5 family → closest behavior to the grader; ample quota).
-- **Cheapest tier is already used:** account SKU **S0** (no idle/fixed cost), deployment SKU
-  **GlobalStandard** (lowest per-token price of the data-plane SKUs). Capacity (TPM) is a rate limit,
-  **not** a price multiplier — you pay strictly per token.
-- **Embedders DO have quota** (unlike `gpt-5-nano`): `text-embedding-3-small` / `ada-002` deploy
-  without a quota request, so the RAG embedder is provisioned automatically.
+## What it deploys
+The template has three model slots, each optional:
+- grading: `gpt-5-nano`, to match the autograder
+- dev: `gpt-5-mini`, for local iteration
+- embedding: `text-embedding-3-small`, for the RAG
 
-Check what's available + has quota in a region:
+Notes:
+- Student subscriptions usually have no quota for `gpt-5-nano`, so the script skips it. The autograder runs on the staff's own `gpt-5-nano`, so you do not strictly need your own.
+- `gpt-4o-mini` can no longer be deployed on Azure (deprecated for new deployments on 2026-03-31), which is why the default dev model is `gpt-5-mini`.
+- Embedding models do have quota, so the embedder deploys without a quota request.
+- The account uses the S0 tier (no fixed cost) and GlobalStandard deployments (lowest per-token price). Capacity sets the rate limit, not the price; you pay per token.
+
+To see what a region offers:
 ```powershell
 az cognitiveservices model list -l <region> --query "[?kind=='OpenAI'].model.name" -o tsv
-az cognitiveservices usage list -l <region> -o table   # quota limits per model/SKU
+az cognitiveservices usage list -l <region> -o table
 ```
 
-## Requesting gpt-5-nano quota (optional)
-The grader doesn't require your own gpt-5-nano, but if you want local parity:
-1. Portal → **Azure AI Foundry** (or **Azure OpenAI** resource) → **Quotas**.
-2. Select **gpt-5-nano**, your region, and a SKU → **Request quota** (small amount, e.g. 10–50K TPM).
-3. Student-sub requests may be slow or denied. If so, use **OpenAI-direct** for gpt-5-nano, or just
-   develop on `gpt-5-mini` and rely on the staff grader.
-After approval, re-run `deploy.ps1` — it will detect the new quota and add the gpt-5-nano deployment.
+## Requesting gpt-5-nano quota
+You do not need your own `gpt-5-nano` to finish the project, but if you want it for local testing:
+1. In the portal, open Azure AI Foundry (or the Azure OpenAI resource) and go to Quotas.
+2. Select `gpt-5-nano`, your region, and a SKU, then request a small amount (10-50K TPM).
+3. Student requests are often slow or denied. If yours is denied, use OpenAI for `gpt-5-nano`, or work on `gpt-5-mini`.
 
-## Budgets & cost alerts
-`deploy.ps1` creates a **subscription-scope** monthly budget (default $20) with email alerts at
-50/80/100% actual + 100% forecast, to your signed-in email. To view it in the portal, set the scope
-to your **Azure for Students subscription**: *Cost Management + Billing → (scope) → Budgets*, or
-*Subscriptions → Azure for Students → Cost Management → Budgets*. (A subscription budget will NOT show
-under the billing-account scope.) Alerts fire only once a threshold is crossed; the portal can lag
-~10–30 min after creation. Authoritative check: `az consumption budget list`.
+Re-run `deploy.ps1` after approval and it will add the deployment.
+
+## Budget and cost alerts
+`deploy.ps1` creates a monthly budget (default $20) on the subscription, with email alerts at 50, 80,
+and 100 percent of actual spend plus a 100 percent forecast alert, sent to your signed-in email. It
+is a subscription-scope budget, so find it under Cost Management + Billing with the subscription
+selected as the scope, or under Subscriptions, your subscription, Cost Management, Budgets. It will
+not appear under the billing-account scope. Alerts only fire after a threshold is crossed, and the
+portal can take 10 to 30 minutes to show a new budget. To check from the CLI, run
+`az consumption budget list`.
 
 ## Files
-- `bootstrap.ps1` — guided interactive setup (tooling → login → sub → role → region + model picker → budget → WhatIf → deploy)
-- `deploy.ps1` — scriptable deploy with quota/deprecation preflight → `.env`
-- `status.ps1` — MTD spend + budget burn report
-- `teardown.ps1` — delete RG + budget
-- `main.bicep` — subscription-scope entry (RG + budget + module)
-- `modules/openai.bicep` — Azure OpenAI account + grading/dev/embedding deployments (each toggleable, own SKU)
-- `main.json` — compiled ARM template (for anyone without Bicep)
-
-## Features
-- Tooling detection + optional auto-install of `az`/`bicep`, with in-process PATH refresh (no shell restart needed)
-- Guided login, subscription picker, and role check
-- Region scan + interactive, quota- and deprecation-aware pickers for **both** the chat model and the **embedding** model
-- Quota + deprecation preflight: skips models you can't deploy and picks a SKU that has quota
-- Three independently-toggleable slots: grading chat model, dev chat model, and RAG embedder
-- Opt-in monthly cost budget with email alerts (50/80/100% actual + 100% forecast)
-- Month-to-date spend report (`status.ps1`) and one-command teardown (`teardown.ps1`)
-- Compiled ARM template (`main.json`) for use without Bicep
-- Idempotent: re-running applies the same declarative template (safe to run repeatedly; e.g. after a quota grant)
+- `bootstrap.ps1`: guided setup
+- `deploy.ps1`: scriptable deploy, writes `.env`
+- `status.ps1`: spend and budget report
+- `teardown.ps1`: delete the resource group and budget
+- `main.bicep`: subscription-scope template (resource group, budget, module)
+- `modules/openai.bicep`: the OpenAI account and model deployments
+- `main.json`: the compiled ARM template, for use without Bicep
 
 ## Cost
-Per-token billing, no idle cost. Target **$10–20 total** for the whole project; run `teardown.ps1`
-when done. You are responsible for spend beyond free credits.
+Billing is per token with no fixed cost. Aim for $10-20 total for the project and run `teardown.ps1`
+when finished. You are responsible for any spend beyond your free credits.
 
 ## License
-MIT — see [LICENSE](LICENSE). Provided as-is to help fellow students with environment setup; it is
-not a graded artifact and contains no assignment solutions.
+MIT, see [LICENSE](LICENSE).

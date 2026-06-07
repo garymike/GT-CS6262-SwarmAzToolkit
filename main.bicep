@@ -1,4 +1,4 @@
-// SWARM Azure OpenAI deployer — subscription-scope entrypoint.
+// SWARM Azure OpenAI deployer - subscription-scope entrypoint.
 // Creates a resource group + an Azure OpenAI account with up to two model deployments:
 //   - "grading" slot (default gpt-5-nano): staff-grader parity; usually 0 quota on student subs.
 //   - "dev" slot     (default gpt-5-mini): cheap local iteration; same gpt-5 family as the grader.
@@ -34,7 +34,7 @@ param gradingSku string = 'GlobalStandard'
 param deployDev bool = true
 @description('Dev deployment name.')
 param devDeploymentName string = 'gpt-5-mini'
-@description('Dev Azure model name (default gpt-5-mini — gpt-5 family, parity with grader).')
+@description('Dev Azure model name (default gpt-5-mini - gpt-5 family, parity with grader).')
 param devModelName string = 'gpt-5-mini'
 @description('Dev model version. Resolved by deploy.ps1.')
 param devModelVersion string
@@ -69,7 +69,7 @@ param enableBudget bool = true
 param budgetAmount int = 20
 @description('Emails to alert. deploy.ps1 fills this from your signed-in account.')
 param budgetContactEmails array = []
-@description('Budget start — must be the first of a month. Defaults to the current month.')
+@description('Budget start - must be the first of a month. Defaults to the current month.')
 param budgetStartDate string = utcNow('yyyy-MM-01')
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {

@@ -56,7 +56,7 @@ try {
       $pct = if ($b.amount) { [math]::Round(100*$spent/$b.amount,1) } else { 0 }
       Write-Host ("  {0}: {1:N2}/{2:N2} ({3}%) [{4}]" -f $b.name,$spent,$b.amount,$pct,$b.timeGrain) -ForegroundColor Green
     }
-  } else { Write-Host "  (no budgets yet — deploy.ps1 creates one)" -ForegroundColor DarkGray }
+  } else { Write-Host "  (no budgets yet - deploy.ps1 creates one)" -ForegroundColor DarkGray }
 } catch { Write-Host "  (budget list unavailable: $($_.Exception.Message))" -ForegroundColor Yellow }
 
 Write-Host "`nExact remaining credit (portal): Cost Management + Billing -> Credits" -ForegroundColor Cyan

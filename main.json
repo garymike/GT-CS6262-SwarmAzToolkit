@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "9579687950307587544"
+      "templateHash": "14374958043307866628"
     }
   },
   "parameters": {
@@ -84,7 +84,7 @@
       "type": "string",
       "defaultValue": "gpt-5-mini",
       "metadata": {
-        "description": "Dev Azure model name (default gpt-5-mini — gpt-5 family, parity with grader)."
+        "description": "Dev Azure model name (default gpt-5-mini - gpt-5 family, parity with grader)."
       }
     },
     "devModelVersion": {
@@ -181,7 +181,7 @@
       "type": "string",
       "defaultValue": "[utcNow('yyyy-MM-01')]",
       "metadata": {
-        "description": "Budget start — must be the first of a month. Defaults to the current month."
+        "description": "Budget start - must be the first of a month. Defaults to the current month."
       }
     }
   },

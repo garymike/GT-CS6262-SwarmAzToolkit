@@ -1,7 +1,7 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-  Tear down SWARM Azure resources when the project is done — deletes the resource group
+  Tear down SWARM Azure resources when the project is done - deletes the resource group
   (Azure OpenAI account + deployments) and, optionally, the subscription budget.
   Uses the az CLI only.
 
@@ -34,7 +34,7 @@ if (-not $acct) { throw 'Not logged in. Run: az login' }
 Write-Host "Subscription: $($acct.name)  ($($acct.id))" -ForegroundColor Cyan
 
 $rgExists = (az group exists -n $ResourceGroup --only-show-errors) -eq 'true'
-if (-not $rgExists) { Write-Host "Resource group '$ResourceGroup' not found — nothing to delete." -ForegroundColor Yellow }
+if (-not $rgExists) { Write-Host "Resource group '$ResourceGroup' not found - nothing to delete." -ForegroundColor Yellow }
 else {
   if (-not $Force) {
     $ans = Read-Host "Delete resource group '$ResourceGroup' and ALL its resources? Type the RG name to confirm"

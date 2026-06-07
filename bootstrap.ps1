@@ -109,7 +109,7 @@ $me = az ad signed-in-user show --query id -o tsv --only-show-errors 2>$null
 $roles = az role assignment list --assignee $me --scope "/subscriptions/$($sub.id)" `
            --query "[].roleDefinitionName" -o tsv --only-show-errors 2>$null
 if ($roles -match 'Owner|Contributor') { Write-Ok "Role(s): $($roles -join ', ')" }
-else { Write-Warn2 "You may lack deploy rights (roles: '$roles'). Owner/Contributor needed; continuing — WhatIf will confirm." }
+else { Write-Warn2 "You may lack deploy rights (roles: '$roles'). Owner/Contributor needed; continuing - WhatIf will confirm." }
 
 # [6] Region + model selection (quota-aware) --------------------------------
 Write-Step 6 'Selecting region + deployable models...'
@@ -179,8 +179,8 @@ Write-Ok "Dev model: $DevModel"
 
 # Grading model: gpt-5-nano by default (deploy.ps1 auto-skips it if quota is 0).
 $GradingModel = 'gpt-5-nano'
-if ($deployable.Name -contains $GradingModel) { Write-Ok "Grading model '$GradingModel' has quota — will deploy." }
-else { Write-Warn2 "Grading model '$GradingModel' has no quota — auto-skipped (grader uses staff's)." }
+if ($deployable.Name -contains $GradingModel) { Write-Ok "Grading model '$GradingModel' has quota - will deploy." }
+else { Write-Warn2 "Grading model '$GradingModel' has no quota - auto-skipped (grader uses staff's)." }
 
 # Embedding model for the RAG.
 $embedOpts = Get-DeployableEmbed $chosenRegion
@@ -194,7 +194,7 @@ if ($embedOpts) {
   $EmbedModel = $embedOpts[$eIdx].Name
   Write-Ok "Embedding model: $EmbedModel"
 } else {
-  Write-Warn2 "No embedding models with quota in '$chosenRegion' — embedder will be skipped (RAG needs one)."
+  Write-Warn2 "No embedding models with quota in '$chosenRegion' - embedder will be skipped (RAG needs one)."
 }
 
 # [7] Budget guardrail (opt-in selection) -----------------------------------
@@ -215,7 +215,7 @@ Write-Step 8 "No-cost preview (WhatIf) in '$chosenRegion'..."
 $deploy = Join-Path $PSScriptRoot 'deploy.ps1'
 $common = @{ Location = $chosenRegion; EnvOut = $EnvOut; BudgetAmount = $budgetAmount; DevModel = $DevModel; GradingModel = $GradingModel; EmbedModel = $EmbedModel; NoBudget = $noBudget }
 & $deploy @common -WhatIf
-if (-not (Confirm-YN "`n    Preview looks good — deploy for real now? (creates billable resources)")) {
+if (-not (Confirm-YN "`n    Preview looks good - deploy for real now? (creates billable resources)")) {
   Write-Host 'Stopped before deployment. Re-run when ready.' -ForegroundColor Yellow
   return
 }
