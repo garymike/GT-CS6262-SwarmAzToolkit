@@ -136,6 +136,26 @@ function Get-DeployableChat($region) {
   return @($out | Sort-Object Quota -Descending)
 }
 
+# Embedding models with quota > 0 in a region.
+function Get-DeployableEmbed($region) {
+  $models = az cognitiveservices model list -l $region --only-show-errors 2>$null | ConvertFrom-Json
+  $usages = az cognitiveservices usage list -l $region --only-show-errors 2>$null | ConvertFrom-Json
+  if (-not $models -or -not $usages) { return @() }
+  $q = @{}
+  foreach ($u in $usages) {
+    if ($u.name.value -match '^OpenAI\.(GlobalStandard|Standard|DataZoneStandard)\.(?<m>.+)$' -and [double]$u.limit -gt 0) {
+      $m = $Matches['m']; if (-not $q.ContainsKey($m) -or $q[$m] -lt [double]$u.limit) { $q[$m] = [double]$u.limit }
+    }
+  }
+  $seen = @{}; $out = @()
+  foreach ($e in ($models | Where-Object { $_.kind -eq 'OpenAI' -and $_.model.name -match 'embedding' })) {
+    $n = $e.model.name
+    if ($seen.ContainsKey($n) -or -not $q.ContainsKey($n)) { continue }
+    $seen[$n] = $true; $out += [pscustomobject]@{ Name = $n; Quota = $q[$n] }
+  }
+  return @($out | Sort-Object Quota -Descending)
+}
+
 $candidateRegions = @('eastus2','eastus','westus3','swedencentral','northcentralus','australiaeast')
 $regAns = Read-Host '    Region [eastus2] (blank = auto-scan candidates)'
 $chosenRegion = $null; $deployable = @()
@@ -162,6 +182,21 @@ $GradingModel = 'gpt-5-nano'
 if ($deployable.Name -contains $GradingModel) { Write-Ok "Grading model '$GradingModel' has quota — will deploy." }
 else { Write-Warn2 "Grading model '$GradingModel' has no quota — auto-skipped (grader uses staff's)." }
 
+# Embedding model for the RAG.
+$embedOpts = Get-DeployableEmbed $chosenRegion
+$EmbedModel = 'text-embedding-3-small'
+if ($embedOpts) {
+  Write-Host "    Deployable embedding models in '$chosenRegion':" -ForegroundColor Cyan
+  for ($i = 0; $i -lt $embedOpts.Count; $i++) { Write-Host ("      [{0}] {1}  (quota {2})" -f $i, $embedOpts[$i].Name, $embedOpts[$i].Quota) }
+  $eDef = [array]::IndexOf(@($embedOpts.Name), 'text-embedding-3-small'); if ($eDef -lt 0) { $eDef = 0 }
+  $ePick = Read-Host "    Pick EMBEDDING model # [$eDef = $($embedOpts[$eDef].Name)]"
+  $eIdx = if ($ePick -match '^\d+$' -and [int]$ePick -lt $embedOpts.Count) { [int]$ePick } else { $eDef }
+  $EmbedModel = $embedOpts[$eIdx].Name
+  Write-Ok "Embedding model: $EmbedModel"
+} else {
+  Write-Warn2 "No embedding models with quota in '$chosenRegion' — embedder will be skipped (RAG needs one)."
+}
+
 # [7] Budget guardrail (opt-in selection) -----------------------------------
 Write-Step 7 'Cost guardrail (subscription budget + email alerts)...'
 $budgetAmount = 20
@@ -178,7 +213,7 @@ if (Confirm-YN '    Create a monthly Cost Management budget with email alerts?')
 # [8] WhatIf gate -----------------------------------------------------------
 Write-Step 8 "No-cost preview (WhatIf) in '$chosenRegion'..."
 $deploy = Join-Path $PSScriptRoot 'deploy.ps1'
-$common = @{ Location = $chosenRegion; EnvOut = $EnvOut; BudgetAmount = $budgetAmount; DevModel = $DevModel; GradingModel = $GradingModel; NoBudget = $noBudget }
+$common = @{ Location = $chosenRegion; EnvOut = $EnvOut; BudgetAmount = $budgetAmount; DevModel = $DevModel; GradingModel = $GradingModel; EmbedModel = $EmbedModel; NoBudget = $noBudget }
 & $deploy @common -WhatIf
 if (-not (Confirm-YN "`n    Preview looks good — deploy for real now? (creates billable resources)")) {
   Write-Host 'Stopped before deployment. Re-run when ready.' -ForegroundColor Yellow

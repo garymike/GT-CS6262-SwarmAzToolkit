@@ -41,6 +41,18 @@ param devModelVersion string
 @allowed([ 'GlobalStandard', 'Standard', 'DataZoneStandard' ])
 param devSku string = 'GlobalStandard'
 
+// --- embedding model slot (for the RAG) ------------------------------------
+@description('Deploy an embedding model for the RAG. deploy.ps1 sets this from a quota preflight.')
+param deployEmbed bool = true
+@description('Embedding deployment name.')
+param embedDeploymentName string = 'text-embedding-3-small'
+@description('Embedding Azure model name (text-embedding-3-small or text-embedding-ada-002).')
+param embedModelName string = 'text-embedding-3-small'
+@description('Embedding model version. Resolved by deploy.ps1.')
+param embedModelVersion string = ''
+@allowed([ 'GlobalStandard', 'Standard', 'DataZoneStandard' ])
+param embedSku string = 'Standard'
+
 @description('Tokens-per-minute capacity (x1000) for each deployment.')
 param capacity int = 10
 
@@ -82,6 +94,11 @@ module openai 'modules/openai.bicep' = {
     devModelName: devModelName
     devModelVersion: devModelVersion
     devSku: devSku
+    deployEmbed: deployEmbed
+    embedDeploymentName: embedDeploymentName
+    embedModelName: embedModelName
+    embedModelVersion: embedModelVersion
+    embedSku: embedSku
     capacity: capacity
     tags: tags
   }
@@ -134,4 +151,5 @@ output endpoint string = openai.outputs.endpoint
 output budgetCreated bool = enableBudget && !empty(budgetContactEmails)
 output gradingDeployment string = deployGrading ? gradingDeploymentName : ''
 output devDeployment string = deployDev ? devDeploymentName : ''
+output embedDeployment string = deployEmbed ? embedDeploymentName : ''
 output resourceGroupName string = rg.name

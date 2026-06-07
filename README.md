@@ -1,10 +1,18 @@
 # swarm-azure-toolkit
 
 One-command Azure OpenAI provisioning for the **CS 6262 SWARM** project. Deploys an Azure OpenAI
-account with two model slots — a **grading** model (`gpt-5-nano`, parity with the staff autograder)
-and a **dev** model (`gpt-5-mini`, cheap local iteration in the same gpt-5 family) — runs a
-**quota + deprecation preflight**, skips anything it can't deploy, creates a **cost budget with
-alerts**, and writes a ready `.env`. Student-agnostic: nothing is hard-coded to one subscription/tenant.
+account with three model slots — a **grading** model (`gpt-5-nano`, parity with the staff autograder),
+a **dev** model (`gpt-5-mini`, cheap local iteration in the same gpt-5 family), and an **embedding**
+model (`text-embedding-3-small`, for the RAG) — runs a **quota + deprecation preflight**, skips
+anything it can't deploy, creates a **cost budget with alerts**, and writes a ready `.env`.
+Student-agnostic: nothing is hard-coded to one subscription/tenant.
+
+> **Heads-up (June 2026): the course staff now recommend OpenAI, not Azure.** Microsoft's quota
+> policy change means `gpt-5-nano` (and `ada-002`) quota requests are commonly **denied** on
+> Azure-for-Students subs — especially if the account is tied to a **GaTech email/tenant**. This
+> toolkit is for those who still want the Azure path: it auto-deploys the models that *do* have
+> quota (e.g. `gpt-5-mini` + `text-embedding-3-small`) and skips the rest. For the simplest route,
+> use OpenAI direct (`gpt-5-nano` + `text-embedding-ada-002`, ~$5).
 
 > Shareable with classmates — the project doc explicitly permits helping with technical setup, and
 > infra tooling is not a graded artifact. **Do not** put your `agents.yaml`/knowledge/training here.
@@ -49,6 +57,8 @@ Auto-locates `az`, registers `Microsoft.CognitiveServices`, runs a **quota + dep
 - **Cheapest tier is already used:** account SKU **S0** (no idle/fixed cost), deployment SKU
   **GlobalStandard** (lowest per-token price of the data-plane SKUs). Capacity (TPM) is a rate limit,
   **not** a price multiplier — you pay strictly per token.
+- **Embedders DO have quota** (unlike `gpt-5-nano`): `text-embedding-3-small` / `ada-002` deploy
+  without a quota request, so the RAG embedder is provisioned automatically.
 
 Check what's available + has quota in a region:
 ```powershell
@@ -78,14 +88,15 @@ under the billing-account scope.) Alerts fire only once a threshold is crossed; 
 - `status.ps1` — MTD spend + budget burn report
 - `teardown.ps1` — delete RG + budget
 - `main.bicep` — subscription-scope entry (RG + budget + module)
-- `modules/openai.bicep` — Azure OpenAI account + grading/dev deployments (each toggleable, own SKU)
+- `modules/openai.bicep` — Azure OpenAI account + grading/dev/embedding deployments (each toggleable, own SKU)
 - `main.json` — compiled ARM template (for anyone without Bicep)
 
 ## Features
 - Tooling detection + optional auto-install of `az`/`bicep`, with in-process PATH refresh (no shell restart needed)
 - Guided login, subscription picker, and role check
-- Region scan + interactive, quota- and deprecation-aware model picker
+- Region scan + interactive, quota- and deprecation-aware pickers for **both** the chat model and the **embedding** model
 - Quota + deprecation preflight: skips models you can't deploy and picks a SKU that has quota
+- Three independently-toggleable slots: grading chat model, dev chat model, and RAG embedder
 - Opt-in monthly cost budget with email alerts (50/80/100% actual + 100% forecast)
 - Month-to-date spend report (`status.ps1`) and one-command teardown (`teardown.ps1`)
 - Compiled ARM template (`main.json`) for use without Bicep

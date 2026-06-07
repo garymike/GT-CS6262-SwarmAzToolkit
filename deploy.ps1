@@ -23,8 +23,10 @@ param(
   [int]    $Capacity      = 10,
   [string] $GradingModel  = 'gpt-5-nano',             # staff-grader parity (often 0 quota)
   [string] $DevModel      = 'gpt-5-mini',             # cheap local iteration (gpt-5 family)
+  [string] $EmbedModel    = 'text-embedding-3-small', # RAG embedder (ada-002 also works)
   [string] $GradingVersion,                            # default: latest non-deprecated, auto-discovered
   [string] $DevVersion,                                # default: latest non-deprecated, auto-discovered
+  [string] $EmbedVersion,                              # default: latest, auto-discovered
   [int]    $BudgetAmount  = 20,                        # monthly USD budget for alerts
   [string[]] $BudgetEmail,                             # default: signed-in user's email
   [switch] $NoBudget,                                  # skip creating the budget
@@ -121,7 +123,9 @@ function Resolve-ModelDeploy([string]$name, [string]$wantVersion, [int]$minCap) 
 
 $grading = Resolve-ModelDeploy $GradingModel $GradingVersion $Capacity
 $dev     = Resolve-ModelDeploy $DevModel     $DevVersion     $Capacity
-if (-not ($grading.Deploy -or $dev.Deploy)) { throw "Neither model has deployable quota in '$Location'. Request quota or try another region." }
+$embed   = Resolve-ModelDeploy $EmbedModel   $EmbedVersion   $Capacity
+if (-not ($grading.Deploy -or $dev.Deploy)) { throw "No chat model has deployable quota in '$Location'. Request quota or try another region." }
+if (-not $embed.Deploy) { Write-Host "   ! No embedder quota — RAG embedder will be skipped (the project's RAG needs one; request quota or use OpenAI)." -ForegroundColor Yellow }
 
 # ---- resolve budget alert email -------------------------------------------
 if (-not $NoBudget -and -not $BudgetEmail) {
@@ -149,6 +153,11 @@ $pv = [ordered]@{
   devSku                = $dev.Sku
   gradingDeploymentName = $GradingModel
   devDeploymentName     = $DevModel
+  deployEmbed           = $embed.Deploy
+  embedModelName        = $EmbedModel
+  embedModelVersion     = $embed.Version
+  embedSku              = $embed.Sku
+  embedDeploymentName   = $EmbedModel
   capacity              = $Capacity
   enableBudget          = $enableBudget
   budgetAmount          = $BudgetAmount
@@ -181,6 +190,7 @@ $endpoint   = $o.endpoint.value
 $account    = $o.accountName.value
 $depGrading = $o.gradingDeployment.value
 $depDev     = $o.devDeployment.value
+$depEmbed   = $o.embedDeployment.value
 $rg         = $o.resourceGroupName.value
 Write-Host "==> Deployed account '$account' @ $endpoint" -ForegroundColor Green
 
@@ -203,6 +213,15 @@ else {
   $lines += "# $GradingModel NOT deployed (no quota). Request quota in the portal, or use OpenAI-direct"
   $lines += '# for parity. The autograder uses STAFF Azure gpt-5-nano regardless of this.'
   $lines += "# SWARM_GRADING_MODEL=azure/$GradingModel"
+}
+if ($depEmbed) {
+  $lines += ''
+  $lines += "# RAG embedder ($EmbedModel) — reconcile var names with the VM's provided .env"
+  $lines += "AZURE_EMBEDDING_DEPLOYMENT=$depEmbed"
+  $lines += "SWARM_EMBED_MODEL=azure/$depEmbed"
+} else {
+  $lines += ''
+  $lines += "# Embedder NOT deployed (no quota). The RAG needs one — request quota or use an OpenAI embedder."
 }
 [System.IO.File]::WriteAllText($EnvOut, ($lines -join "`n") + "`n")
 

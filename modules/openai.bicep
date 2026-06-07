@@ -28,6 +28,14 @@ param devModelVersion string
 @allowed([ 'GlobalStandard', 'Standard', 'DataZoneStandard' ])
 param devSku string = 'GlobalStandard'
 
+@description('Deploy an embedding model for the RAG (CrewAI/ChromaDB).')
+param deployEmbed bool = true
+param embedDeploymentName string = 'text-embedding-3-small'
+param embedModelName string = 'text-embedding-3-small'
+param embedModelVersion string = ''
+@allowed([ 'GlobalStandard', 'Standard', 'DataZoneStandard' ])
+param embedSku string = 'Standard'
+
 param capacity int
 param tags object
 
@@ -77,6 +85,26 @@ resource dev 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = if 
       format: 'OpenAI'
       name: devModelName
       version: devModelVersion
+    }
+    versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
+  }
+}
+
+resource embed 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = if (deployEmbed) {
+  parent: account
+  name: embedDeploymentName
+  dependsOn: [
+    dev
+  ]
+  sku: {
+    name: embedSku
+    capacity: capacity
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: embedModelName
+      version: embedModelVersion
     }
     versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
   }

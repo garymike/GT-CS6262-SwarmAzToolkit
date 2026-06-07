@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "6642287541976099125"
+      "templateHash": "9579687950307587544"
     }
   },
   "parameters": {
@@ -96,6 +96,43 @@
     "devSku": {
       "type": "string",
       "defaultValue": "GlobalStandard",
+      "allowedValues": [
+        "GlobalStandard",
+        "Standard",
+        "DataZoneStandard"
+      ]
+    },
+    "deployEmbed": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy an embedding model for the RAG. deploy.ps1 sets this from a quota preflight."
+      }
+    },
+    "embedDeploymentName": {
+      "type": "string",
+      "defaultValue": "text-embedding-3-small",
+      "metadata": {
+        "description": "Embedding deployment name."
+      }
+    },
+    "embedModelName": {
+      "type": "string",
+      "defaultValue": "text-embedding-3-small",
+      "metadata": {
+        "description": "Embedding Azure model name (text-embedding-3-small or text-embedding-ada-002)."
+      }
+    },
+    "embedModelVersion": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Embedding model version. Resolved by deploy.ps1."
+      }
+    },
+    "embedSku": {
+      "type": "string",
+      "defaultValue": "Standard",
       "allowedValues": [
         "GlobalStandard",
         "Standard",
@@ -247,6 +284,21 @@
           "devSku": {
             "value": "[parameters('devSku')]"
           },
+          "deployEmbed": {
+            "value": "[parameters('deployEmbed')]"
+          },
+          "embedDeploymentName": {
+            "value": "[parameters('embedDeploymentName')]"
+          },
+          "embedModelName": {
+            "value": "[parameters('embedModelName')]"
+          },
+          "embedModelVersion": {
+            "value": "[parameters('embedModelVersion')]"
+          },
+          "embedSku": {
+            "value": "[parameters('embedSku')]"
+          },
           "capacity": {
             "value": "[parameters('capacity')]"
           },
@@ -261,7 +313,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "15332059656215356204"
+              "templateHash": "16109370407256219750"
             }
           },
           "parameters": {
@@ -321,6 +373,34 @@
             "devSku": {
               "type": "string",
               "defaultValue": "GlobalStandard",
+              "allowedValues": [
+                "GlobalStandard",
+                "Standard",
+                "DataZoneStandard"
+              ]
+            },
+            "deployEmbed": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Deploy an embedding model for the RAG (CrewAI/ChromaDB)."
+              }
+            },
+            "embedDeploymentName": {
+              "type": "string",
+              "defaultValue": "text-embedding-3-small"
+            },
+            "embedModelName": {
+              "type": "string",
+              "defaultValue": "text-embedding-3-small"
+            },
+            "embedModelVersion": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "embedSku": {
+              "type": "string",
+              "defaultValue": "Standard",
               "allowedValues": [
                 "GlobalStandard",
                 "Standard",
@@ -392,6 +472,28 @@
                 "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
                 "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('accountName'), parameters('gradingDeploymentName'))]"
               ]
+            },
+            {
+              "condition": "[parameters('deployEmbed')]",
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('embedDeploymentName'))]",
+              "sku": {
+                "name": "[parameters('embedSku')]",
+                "capacity": "[parameters('capacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('embedModelName')]",
+                  "version": "[parameters('embedModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('accountName'), parameters('devDeploymentName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -431,6 +533,10 @@
     "devDeployment": {
       "type": "string",
       "value": "[if(parameters('deployDev'), parameters('devDeploymentName'), '')]"
+    },
+    "embedDeployment": {
+      "type": "string",
+      "value": "[if(parameters('deployEmbed'), parameters('embedDeploymentName'), '')]"
     },
     "resourceGroupName": {
       "type": "string",
