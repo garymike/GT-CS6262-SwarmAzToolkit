@@ -1,0 +1,11 @@
+# Declare the intended visibility and purpose of this repo.
+# The github-security-audit skill checks this against actual GitHub settings
+# and flags any mismatch as a finding.
+#
+# visibility: public | private
+# purpose: free-text description of what this repo is for
+
+visibility: public
+purpose: >
+  Georgia Tech CS6262 (Network Security) coursework — SwarmAz toolkit,
+  PowerShell-based Azure security tooling.
