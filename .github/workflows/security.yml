@@ -1,0 +1,19 @@
+name: Security
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  scan:
+    uses: garymike/security-workflows/.github/workflows/security-scan.yml@main
+    secrets: inherit
+
+  audit:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    uses: garymike/security-workflows/.github/workflows/security-audit.yml@main
+    secrets: inherit
