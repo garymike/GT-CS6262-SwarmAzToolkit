@@ -10,10 +10,15 @@ on:
 
 jobs:
   scan:
+    permissions:
+      contents: read
+      pull-requests: read
     uses: garymike/security-workflows/.github/workflows/security-scan.yml@main
     secrets: inherit
 
   audit:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
     uses: garymike/security-workflows/.github/workflows/security-audit.yml@main
     secrets: inherit
