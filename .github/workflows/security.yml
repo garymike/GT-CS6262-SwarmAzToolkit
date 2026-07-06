@@ -13,12 +13,12 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: garymike/security-workflows/.github/workflows/security-scan.yml@main
+    uses: garymike/security-workflows/.github/workflows/security-scan.yml@fbd11e574f4bfab4a132228457d33267609c8470 # main @ 2026-07-06
     secrets: inherit
 
   audit:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-    uses: garymike/security-workflows/.github/workflows/security-audit.yml@main
+    uses: garymike/security-workflows/.github/workflows/security-audit.yml@fbd11e574f4bfab4a132228457d33267609c8470 # main @ 2026-07-06
     secrets: inherit
