@@ -1,0 +1,24 @@
+# Keeps this repository's GitHub Actions pins current.
+#
+# The actions here are pinned so a moved upstream tag cannot silently change
+# what runs. Pinning is right, but a pin does not move on its own, and nothing
+# else bumps it: Dependabot's security updates cover advisories in application
+# dependencies, not routine action versions. Without this file the pins simply
+# rot. That is not hypothetical -- callers of the shared security workflow sat
+# 7 to 9 weeks behind it until 2026-09-09, and the drift was only found by
+# reading every pin by hand.
+#
+# Grouped so a week of bumps arrives as one review rather than several, and
+# held for seven days so a freshly published version has time to be yanked
+# before it lands here. Same shape as security-workflows/.github/dependabot.yml.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
