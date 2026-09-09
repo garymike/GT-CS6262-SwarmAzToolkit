@@ -22,11 +22,9 @@ jobs:
       packages: read       # reusable pulls the pinned betterleaks image from GHCR
       pull-requests: read
     uses: garymike/security-workflows/.github/workflows/security-scan.yml@4f31e6425ad60afbfdc51c04651f4977a87e788c # main @ 2026-09-09
-    secrets: inherit
 
   audit:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
     uses: garymike/security-workflows/.github/workflows/security-audit.yml@4f31e6425ad60afbfdc51c04651f4977a87e788c # main @ 2026-09-09
-    secrets: inherit
