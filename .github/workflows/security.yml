@@ -15,6 +15,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Default every job to read-only; a job that needs more raises it explicitly below.
+permissions:
+  contents: read
+
 # Every job below calls a reusable workflow in garymike/security-workflows, pinned
 # to a commit SHA. The caller's permissions block is a hard ceiling: a reusable
 # workflow that asks for a permission the caller withheld fails at startup with
