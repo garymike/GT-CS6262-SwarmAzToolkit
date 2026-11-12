@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "14374958043307866628"
+      "version": "0.49.2.45890",
+      "templateHash": "4852409192678986620"
     }
   },
   "parameters": {
@@ -312,8 +312,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "16109370407256219750"
+              "version": "0.49.2.45890",
+              "templateHash": "11170460503120645364"
             }
           },
           "parameters": {
@@ -424,6 +424,9 @@
               "kind": "OpenAI",
               "sku": {
                 "name": "S0"
+              },
+              "identity": {
+                "type": "SystemAssigned"
               },
               "properties": {
                 "customSubDomainName": "[parameters('accountName')]",

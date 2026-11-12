@@ -86,6 +86,22 @@ portal can take 10 to 30 minutes to show a new budget. To check from the CLI, ru
 - `modules/openai.bicep`: the OpenAI account and model deployments
 - `main.json`: the compiled ARM template, for use without Bicep
 
+## Security posture
+
+The account is reachable from the public internet and authenticates with its key. Both are
+deliberate for a course deployment, and both are flagged by Checkov, so the reasons are
+recorded here and in `.checkov.yaml`:
+
+- **Public network access stays on** (`CKV_AZURE_134`). You call the endpoint from your laptop
+  and the autograder calls it from GT. Turning public access off needs a VNet, a private
+  endpoint (about $7/month, more than the project's whole budget) and a VPN into it.
+- **Key authentication stays on** (`CKV_AZURE_236`). The course's client stack authenticates
+  with `AZURE_API_KEY`. Entra-only auth would need every student to hold a role assignment and
+  exchange tokens, which the materials do not cover. The key lives only in your local `.env`,
+  which is gitignored; rotate it with `az cognitiveservices account keys regenerate` if it leaks.
+- **A system-assigned managed identity is on** (`CKV_AZURE_238`). It costs nothing and lets the
+  account reach other Azure resources without a stored secret if a later exercise needs it.
+
 ## Cost
 Billing is per token with no fixed cost. Aim for $10-20 total for the project and run `teardown.ps1`
 when finished. You are responsible for any spend beyond your free credits.

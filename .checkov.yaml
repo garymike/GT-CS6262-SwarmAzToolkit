@@ -1,0 +1,21 @@
+# Checkov policy for this template. Two checks are suppressed on purpose; the third
+# Cognitive Services check (CKV_AZURE_238, managed identity) is fixed in modules/openai.bicep.
+#
+# CKV_AZURE_134 "disable public network access": students call the endpoint from their own
+#   laptops and the autograder calls it from GT's network. Disabling public access needs a
+#   VNet plus a private endpoint (about $7/month, more than this project's whole $10-20
+#   budget) and a VPN into it. The account is still protected by its key, which deploy.ps1
+#   writes only to a local .env that is gitignored.
+#
+# CKV_AZURE_236 "disable local authentication": the course's client stack (LiteLLM-style
+#   AZURE_API_KEY / AZURE_API_BASE) authenticates with the account key. Turning local auth
+#   off would require every student to hold a Cognitive Services OpenAI User role
+#   assignment and exchange Entra tokens, which the course materials do not cover.
+#   Revisit if the client code moves to DefaultAzureCredential.
+#
+# Both suppressions apply to the Bicep module and to main.json, its compiled ARM output,
+# which cannot carry inline comments. The shared iac-security workflow runs Checkov from
+# the repo root, where this file is picked up automatically.
+skip-check:
+  - CKV_AZURE_134
+  - CKV_AZURE_236
