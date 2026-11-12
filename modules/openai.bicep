@@ -39,6 +39,9 @@ param embedSku string = 'Standard'
 param capacity int
 param tags object
 
+// Checkov (CKV_AZURE_134, CKV_AZURE_236) wants public network access off and local
+// (key) auth off. Both are deliberately left on; the reasons are in .checkov.yaml next to
+// the suppressions, and in the README under "Security posture".
 resource account 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: accountName
   location: location
@@ -46,6 +49,11 @@ resource account 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   kind: 'OpenAI'
   sku: {
     name: 'S0'
+  }
+  // System-assigned identity (CKV_AZURE_238). Costs nothing, lets the account reach other
+  // Azure resources without a stored secret if a later exercise needs it.
+  identity: {
+    type: 'SystemAssigned'
   }
   properties: {
     customSubDomainName: accountName
